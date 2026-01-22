@@ -1,0 +1,59 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { fetchPostBySlug, getWordPressBaseUrl, type WPPost } from '../../lib/wp';
+
+const { slug } = Astro.params;
+const baseUrl = getWordPressBaseUrl();
+let post: WPPost | null = null;
+let errorMessage: string | null = null;
+
+if (!baseUrl) {
+  errorMessage = 'Set WORDPRESS_BASE_URL to connect to your local WordPress site.';
+} else if (!slug) {
+  errorMessage = 'Missing post slug.';
+} else {
+  try {
+    post = await fetchPostBySlug(slug);
+    if (!post) {
+      Astro.response.status = 404;
+      errorMessage = 'Post not found.';
+    }
+  } catch (error) {
+    errorMessage = error instanceof Error ? error.message : 'Unable to load the post.';
+  }
+}
+
+const formatDate = (date: string) =>
+  new Date(date).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+---
+
+<BaseLayout title={post ? post.title : 'Blog'}>
+  <section class="stack">
+    {errorMessage ? (
+      <div class="notice">{errorMessage}</div>
+    ) : post ? (
+      <article class="stack">
+        <div>
+          <h1 class="section-heading">{post.title}</h1>
+          <p class="meta-text">{formatDate(post.date)}</p>
+        </div>
+        <div class="post-content" set:html={post.content} />
+      </article>
+    ) : null}
+  </section>
+</BaseLayout>
+
+<style>
+  .post-content :global(p) {
+    margin-bottom: var(--space-md);
+  }
+
+  .post-content :global(h2),
+  .post-content :global(h3) {
+    margin: var(--space-lg) 0 var(--space-sm);
+  }
+</style>
