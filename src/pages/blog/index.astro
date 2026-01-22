@@ -1,0 +1,46 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Card from '../../components/Card';
+import { fetchPosts, getWordPressBaseUrl, type WPPost } from '../../lib/wp';
+
+const baseUrl = getWordPressBaseUrl();
+let posts: WPPost[] = [];
+let errorMessage: string | null = null;
+
+if (!baseUrl) {
+  errorMessage = 'Set WORDPRESS_BASE_URL to connect to your local WordPress site.';
+} else {
+  try {
+    posts = await fetchPosts();
+  } catch (error) {
+    errorMessage = error instanceof Error ? error.message : 'Unable to load posts.';
+  }
+}
+
+const formatDate = (date: string) =>
+  new Date(date).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+---
+
+<BaseLayout title="Blog">
+  <section class="stack">
+    <h1 class="section-heading">Blog</h1>
+
+    {errorMessage ? (
+      <div class="notice">{errorMessage}</div>
+    ) : posts.length === 0 ? (
+      <div class="notice">No posts yet. Add a post in WordPress to get started.</div>
+    ) : (
+      <div class="stack">
+        {posts.map((post) => (
+          <Card title={post.title} href={`/blog/${post.slug}`} date={formatDate(post.date)}>
+            <div set:html={post.excerpt} />
+          </Card>
+        ))}
+      </div>
+    )}
+  </section>
+</BaseLayout>
